@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>솜하치의 리플 수집함</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#fdf5f6', // Soft pastel pink background
+                        primary: '#f4a8b6', // Warm strawberry pink
+                        primaryHover: '#f08fa4',
+                        accent: '#e28899',
+                        text: {
+                            main: '#3a2329', // High contrast warm dark espresso brown
+                            muted: '#7a6368', // Readable secondary muted brown
+                        },
+                        card: '#ffffff',
+                    },
+                    boxShadow: {
+                        'cute': '0 10px 25px -5px rgba(240, 143, 164, 0.2)',
+                        'cute-hover': '0 15px 35px -5px rgba(240, 143, 164, 0.35)',
+                        'badge': '0 2px 8px rgba(244, 168, 182, 0.25)',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        /* Web Font: RIDIBatang */
+        @font-face {
+            font-family: 'RIDIBatang';
+            src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_twelve@1.0/RIDIBatang.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        body {
+            font-family: 'RIDIBatang', serif;
+            background-color: #fdf5f6;
+            color: #3a2329;
+            overflow-x: hidden;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #fdf5f6; }
+        ::-webkit-scrollbar-thumb { background: #f4a8b6; border-radius: 5px; border: 2px solid #fdf5f6; }
+        ::-webkit-scrollbar-thumb:hover { background: #f08fa4; }
+
+        /* Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-up {
+            opacity: 0;
+            animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Hover bounce effect */
+        .hover-bounce {
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .hover-bounce:hover {
+            transform: scale(1.02);
+        }
+        .active-bounce:active {
+            transform: scale(0.96);
+        }
+
+        /* Card styles & Watched Transition */
+        .replay-card {
+            transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .watched-card {
+            opacity: 0.6;
+            filter: grayscale(35%);
+            background-color: #faf3f4 !important;
+            border-color: #ebdcd3 !important;
+            box-shadow: none !important;
+        }
+        .watched-text {
+            text-decoration: line-through;
+            color: #8c787c;
+        }
+
+        /* Smooth inputs */
+        input, select, textarea, button, label {
+            transition: all 0.2s ease;
+        }
+        
+        /* Hide default radio circle for custom styling */
+        input[type="radio"]:checked + div {
+            background-color: #f4a8b6;
+            color: white;
+            border-color: #f4a8b6;
+            box-shadow: 0 4px 12px rgba(244, 168, 182, 0.4);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-8 px-4 sm:px-6 lg:px-8 selection:bg-primary selection:text-white">
+
+    <!-- Header Section -->
+    <header class="w-full max-w-7xl mb-8 animate-slide-up" style="animation-delay: 0.1s;">
+        <div class="bg-card/90 backdrop-blur-md border-2 border-primary/20 rounded-[2rem] p-6 sm:p-8 shadow-cute flex flex-col md:flex-row items-center justify-between gap-6">
+            
+            <div class="flex items-center gap-5 animate-float">
+                <div class="w-16 h-16 bg-bg rounded-2xl flex items-center justify-center text-primary shadow-inner border border-primary/20">
+                    <i data-lucide="mail-heart" class="w-9 h-9"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl sm:text-4xl font-extrabold text-text-main tracking-tight mb-1">솜하치의 리플 수집함</h1>
+                    <p class="text-sm sm:text-base text-text-muted flex items-center gap-2 font-bold">
+                        <span>매주 월요일 오후 7시 마감</span>
+                        <span class="text-primary animate-pulse">🩷</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- D-Day Timer -->
+            <div class="bg-bg/90 border-2 border-primary/30 px-6 py-4 rounded-2xl flex items-center gap-4 shadow-sm min-w-[260px] justify-center hover-bounce">
+                <div class="bg-white p-2.5 rounded-full shadow-sm text-primary animate-pulse">
+                    <i data-lucide="clock" class="w-6 h-6"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-xs font-bold text-text-muted uppercase tracking-wider mb-0.5">마감까지 남은 시간</span>
+                    <span id="countdownTimer" class="text-xl sm:text-2xl font-black text-text-main tabular-nums tracking-tight">계산 중...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Left Column: Rules & Submission Form -->
+        <div class="lg:col-span-4 space-y-6">
+            
+            <!-- Rules Card -->
+            <div class="bg-card border-2 border-primary/20 rounded-[1.5rem] shadow-cute overflow-hidden animate-slide-up" style="animation-delay: 0.15s;">
+                <div class="flex items-center gap-3 p-5 bg-bg/60 border-b border-primary/20 text-text-main text-lg font-bold">
+                    <i data-lucide="book-heart" class="w-6 h-6 text-primary"></i>
+                    신청 안내 & 규칙
+                </div>
+                <div class="p-6 bg-white space-y-4 text-base text-text-main leading-relaxed">
+                    <ul class="space-y-3 font-medium text-sm sm:text-base">
+                        <li class="flex items-start gap-2.5">
+                            <span class="text-primary font-bold text-lg leading-none mt-0.5">•</span>
+                            <span>1인당 기본 최대 <strong class="text-primary font-bold">2개</strong> 신청 가능</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <span class="text-primary font-bold text-lg leading-none mt-0.5">•</span>
+                            <span>추가 신청은 <strong class="text-primary font-bold">2,000 치즈</strong>부터 가능 (무제한)</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <span class="text-primary font-bold text-lg leading-none mt-0.5">•</span>
+                            <span>팔로우 유입 시 <strong class="text-primary font-bold">무료 신청권 1장</strong> 지급!</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <span class="text-primary font-bold text-lg leading-none mt-0.5">•</span>
+                            <span>기본 리플 슬롯은 최대 <strong class="text-primary font-bold">12개</strong> (이후 추가 신청)</span>
+                        </li>
+                    </ul>
+                    
+                    <div class="mt-4 p-4 bg-bg rounded-2xl border border-primary/20 space-y-1">
+                        <p class="font-bold flex items-center gap-2 text-text-main text-sm">
+                            <span class="text-primary">🩷</span> 구독자 혜택 안내
+                        </p>
+                        <p class="text-xs text-text-muted leading-snug">
+                            [구독자 전용 추가 리플권] 체크 시 추가 슬롯에 자동 배치됩니다.
+                        </p>
+                    </div>
+                    
+                    <div class="p-4 bg-yellow-50/60 rounded-2xl border border-yellow-200/80 shadow-sm space-y-1">
+                        <p class="font-bold flex items-center gap-2 text-yellow-700 text-sm">
+                            🏆 BEST 리플 혜택
+                        </p>
+                        <p class="text-xs text-text-muted leading-snug">
+                            최고의 리플로 선정 시 다음 리플 데이 <strong class="text-yellow-800">[우선 시청권]</strong> 획득! 👑
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submission Form -->
+            <div class="bg-card border-2 border-primary/20 rounded-[1.5rem] p-6 sm:p-8 shadow-cute animate-slide-up" style="animation-delay: 0.25s;">
+                <h2 class="text-2xl font-extrabold text-text-main flex items-center gap-3 mb-6">
+                    <i data-lucide="sparkles" class="w-6 h-6 text-primary"></i>
+                    리플 신청하기
+                </h2>
+
+                <form id="replayForm" onsubmit="handleSubmit(event)" class="space-y-5">
+                    
+                    <!-- Applicant Nickname -->
+                    <div>
+                        <label class="block text-sm font-extrabold text-text-main mb-2 flex items-center gap-1.5">
+                            <i data-lucide="user-check" class="w-4 h-4 text-primary"></i>
+                            신청자 닉네임 <span class="text-primary">*</span>
+                        </label>
+                        <input type="text" id="nickname" required placeholder="예: 솜하치#1234"
+                            class="w-full bg-bg/80 border-2 border-primary/20 rounded-2xl px-4 py-3 text-base font-bold text-text-main placeholder-text-muted/50 focus:outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/20">
+                    </div>
+
+                    <!-- Replay Code -->
+                    <div>
+                        <label class="block text-sm font-extrabold text-text-main mb-2 flex items-center gap-1.5">
+                            <i data-lucide="hash" class="w-4 h-4 text-primary"></i>
+                            리플 코드 <span class="text-primary">*</span>
+                        </label>
+                        <input type="text" id="replayCode" required placeholder="예: A1B2C3" maxlength="10"
+                            class="w-full bg-bg/80 border-2 border-primary/20 rounded-2xl px-4 py-3 text-base font-mono font-bold text-text-main placeholder-text-muted/50 uppercase focus:outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/20">
+                    </div>
+
+                    <!-- Game Mode Radio Selection -->
+                    <div>
+                        <label class="block text-sm font-extrabold text-text-main mb-2 flex items-center gap-1.5">
+                            <i data-lucide="gamepad-2" class="w-4 h-4 text-primary"></i>
+                            게임 모드 <span class="text-primary">*</span>
+                        </label>
+                        <div class="grid grid-cols-3 gap-2.5">
+                            <label class="cursor-pointer hover-bounce">
+                                <input type="radio" name="gameMode" value="빠른대전" onchange="handleFormLogic()" class="hidden">
+                                <div class="text-center py-3 px-1 rounded-2xl border-2 border-primary/20 bg-bg text-text-muted font-bold text-xs sm:text-sm">빠른대전</div>
+                            </label>
+                            <label class="cursor-pointer hover-bounce">
+                                <input type="radio" name="gameMode" value="경쟁전" checked onchange="handleFormLogic()" class="hidden">
+                                <div class="text-center py-3 px-1 rounded-2xl border-2 border-primary/20 bg-bg text-text-muted font-bold text-xs sm:text-sm">경쟁전</div>
+                            </label>
+                            <label class="cursor-pointer hover-bounce">
+                                <input type="radio" name="gameMode" value="기타(아케이드 등)" onchange="handleFormLogic()" class="hidden">
+                                <div class="text-center py-3 px-1 rounded-2xl border-2 border-primary/20 bg-bg text-text-muted font-bold text-xs sm:text-sm">기타</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Tier Select & Guess Mode -->
+                    <div class="space-y-3">
+                        <div class="flex items-end gap-3">
+                            <div class="flex-1">
+                                <label class="block text-sm font-extrabold text-text-main mb-2 flex items-center gap-1.5">
+                                    <i data-lucide="trophy" class="w-4 h-4 text-primary"></i>
+                                    티어 선택 <span id="tierAsterisk" class="text-primary">*</span>
+                                </label>
+                                <select id="tier" required class="w-full bg-bg/80 border-2 border-primary/20 rounded-2xl px-4 py-3 text-sm sm:text-base font-bold text-text-main focus:outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/20 disabled:opacity-60 disabled:bg-gray-100 disabled:text-text-muted disabled:border-gray-200 disabled:cursor-not-allowed">
+                                    <option value="" disabled selected>티어를 선택해주세요</option>
+                                    <option value="브론즈">브론즈</option>
+                                    <option value="실버">실버</option>
+                                    <option value="골드">골드</option>
+                                    <option value="플래티넘">플래티넘</option>
+                                    <option value="에메랄드">에메랄드</option>
+                                    <option value="다이아몬드">다이아몬드</option>
+                                    <option value="마스터">마스터</option>
+                                    <option value="그랜드마스터">그랜드마스터</option>
+                                    <option value="챔피언">챔피언</option>
+                                </select>
+                            </div>
+                            <div class="flex-shrink-0 mb-0.5 hover-bounce">
+                                <label class="flex items-center gap-1.5 cursor-pointer px-3.5 py-3 rounded-2xl border-2 border-primary/30 bg-bg hover:bg-primary/10 transition-all text-text-main">
+                                    <input type="checkbox" id="isTierGuess" onchange="handleFormLogic()" class="hidden">
+                                    <span class="text-xs sm:text-sm font-extrabold">티어 맞추기 ❓</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Simple Memo or Title -->
+                    <div>
+                        <label class="block text-sm font-extrabold text-text-main mb-2 flex items-center gap-1.5">
+                            <i data-lucide="message-square-text" class="w-4 h-4 text-primary"></i>
+                            간단한 메모 혹은 제목
+                        </label>
+                        <textarea id="memo" rows="2" placeholder="사연이나 영상의 간단한 설명을 적어주세요."
+                            class="w-full bg-bg/80 border-2 border-primary/20 rounded-2xl px-4 py-3 text-sm sm:text-base font-medium text-text-main placeholder-text-muted/50 resize-none focus:outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/20"></textarea>
+                    </div>
+
+                    <!-- Additional Perks Checkboxes -->
+                    <div class="bg-bg/60 p-4 rounded-2xl border border-primary/20 space-y-3">
+                        <span class="block text-xs font-extrabold text-text-muted tracking-wide border-b border-primary/20 pb-1.5">추가 혜택 옵션</span>
+                        
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" id="optFollower" class="w-4 h-4 rounded text-primary focus:ring-primary border-primary/40 bg-white">
+                            <span class="text-xs sm:text-sm text-text-muted group-hover:text-text-main font-bold transition-colors">✨ 팔로우 무료 신청권 사용</span>
+                        </label>
+                        
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" id="optSubscriber" class="w-4 h-4 rounded text-primary focus:ring-primary border-primary/40 bg-white">
+                            <span class="text-xs sm:text-sm text-text-muted group-hover:text-text-main font-bold transition-colors">🩷 구독자 전용 추가 리플권</span>
+                        </label>
+                        
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" id="optCheese" class="w-4 h-4 rounded text-primary focus:ring-primary border-primary/40 bg-white">
+                            <span class="text-xs sm:text-sm text-text-muted group-hover:text-text-main font-bold transition-colors">🧀 2,000 치즈 후원 (무제한)</span>
+                        </label>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="w-full py-4 rounded-2xl bg-primary hover:bg-primaryHover text-white font-extrabold text-base sm:text-lg shadow-cute hover:shadow-cute-hover flex items-center justify-center gap-2 hover-bounce active-bounce">
+                        <i data-lucide="send" class="w-5 h-5"></i>
+                        리플 신청하기
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column: Slots Dashboard -->
+        <div class="lg:col-span-8 space-y-6 animate-slide-up" style="animation-delay: 0.35s;">
+            
+            <!-- Dashboard Controls Header -->
+            <div class="bg-card border-2 border-primary/20 rounded-[1.5rem] p-6 shadow-cute space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-bg">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-text-main flex items-center gap-3">
+                            <i data-lucide="layout-grid" class="w-7 h-7 text-primary"></i>
+                            리플 슬롯 현황
+                        </h2>
+                        <p class="text-xs sm:text-sm font-bold text-text-muted mt-1">
+                            신청자 닉네임이 카드 상단에 <strong class="text-primary underline decoration-primary/40">커다란 핑크 태그</strong>로 강조됩니다! 🩷
+                        </p>
+                    </div>
+                    
+                    <button onclick="openClearModal()" class="self-start sm:self-center px-3.5 py-2 text-text-muted hover:text-red-500 bg-bg hover:bg-red-50 border border-primary/20 hover:border-red-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5" title="전체 삭제">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i> 초기화
+                    </button>
+                </div>
+
+                <!-- Search Bar & Filters -->
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <div class="relative flex-1">
+                        <i data-lucide="search" class="w-4 h-4 text-primary absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                        <input type="text" id="searchInput" oninput="renderSlots()" placeholder="신청자 닉네임 또는 리플 코드로 검색..."
+                            class="w-full bg-bg/80 border border-primary/20 rounded-xl pl-10 pr-4 py-2.5 text-xs sm:text-sm font-bold text-text-main placeholder-text-muted/50 focus:outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20">
+                    </div>
+                    <div class="flex gap-1.5 bg-bg p-1 rounded-xl border border-primary/20">
+                        <button onclick="setFilter('all')" id="filterAll" class="px-3 py-1.5 rounded-lg text-xs font-extrabold bg-primary text-white shadow-sm transition-all">전체</button>
+                        <button onclick="setFilter('unwatched')" id="filterUnwatched" class="px-3 py-1.5 rounded-lg text-xs font-extrabold text-text-muted hover:text-text-main transition-all">미시청 🌸</button>
+                        <button onclick="setFilter('watched')" id="filterWatched" class="px-3 py-1.5 rounded-lg text-xs font-extrabold text-text-muted hover:text-text-main transition-all">시청완료 💤</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Base Slots Section -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between px-2">
+                    <h3 class="text-lg font-extrabold text-text-main flex items-center gap-2">
+                        <i data-lucide="sparkles" class="w-5 h-5 text-primary"></i>
+                        기본 슬롯
+                    </h3>
+                    <span id="baseSlotCount" class="text-xs sm:text-sm font-extrabold bg-white shadow-sm border-2 border-primary/20 text-primary px-3.5 py-1 rounded-xl">0 / 12</span>
+                </div>
+                
+                <div id="baseSlotsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
+                    <!-- Base slot cards generated via JS -->
+                </div>
+            </div>
+
+            <!-- Extra Slots Section -->
+            <div id="extraSlotsWrapper" class="hidden pt-6 border-t-2 border-dashed border-primary/30 space-y-4">
+                <div class="flex items-center justify-between px-2">
+                    <h3 class="text-lg font-extrabold text-text-main flex items-center gap-2">
+                        <i data-lucide="party-popper" class="w-5 h-5 text-primary"></i> 
+                        추가 리플 슬롯
+                    </h3>
+                    <span id="extraSlotCount" class="text-xs sm:text-sm font-extrabold bg-white shadow-sm border-2 border-primary/20 text-primary px-3.5 py-1 rounded-xl">0개</span>
+                </div>
+                <div id="extraSlotsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
+                    <!-- Extra slot cards generated via JS -->
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Custom Clear Confirmation Modal -->
+    <div id="clearModal" class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50 opacity-0 pointer-events-none transition-opacity duration-200">
+        <div class="bg-card border-2 border-primary/30 rounded-[2rem] p-6 sm:p-8 max-w-sm w-full shadow-cute text-center space-y-5 transform scale-95 transition-transform duration-200">
+            <div class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto border border-red-100">
+                <i data-lucide="alert-triangle" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-extrabold text-text-main mb-2">리플 수집함 초기화</h3>
+                <p class="text-xs sm:text-sm font-bold text-text-muted leading-relaxed">
+                    등록된 모든 신청 내역을 지우시겠어요? 🥺<br>이 작업은 복구할 수 없습니다.
+                </p>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeClearModal()" class="flex-1 py-3 bg-bg hover:bg-gray-200 text-text-main rounded-xl font-extrabold text-sm transition-colors">취소</button>
+                <button onclick="confirmClearAllData()" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-extrabold text-sm shadow-sm transition-colors">전체 삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastMsg" class="fixed bottom-8 right-8 transform translate-y-24 opacity-0 transition-all duration-300 bg-white border-2 border-primary/30 shadow-cute rounded-2xl p-4 flex items-center gap-3 z-50">
+        <div class="w-9 h-9 rounded-full bg-bg flex items-center justify-center text-primary shadow-inner">
+            <i data-lucide="heart" class="w-5 h-5 fill-primary"></i>
+        </div>
+        <span id="toastText" class="text-xs sm:text-sm font-extrabold text-text-main">알림 메시지</span>
+    </div>
+
+    <script>
+        // State Management
+        let replays = JSON.parse(localStorage.getItem('somhachi_replays')) || [
+            // Pre-populated initial sample data for instant delight
+            {
+                id: 'sample-1',
+                nickname: '솜하치 팬클럽#1234',
+                replayCode: 'A8K9L2',
+                mode: '경쟁전',
+                tier: '에메랄드',
+                memo: '솜하치님 트레이서 잘하는 법 피드백 부탁드립니다!',
+                perks: { follower: true, subscriber: true, cheese: false },
+                isForcedExtra: false,
+                watched: false
+            },
+            {
+                id: 'sample-2',
+                nickname: '치즈대왕#5678',
+                replayCode: 'P3M7W9',
+                mode: '경쟁전',
+                tier: '티어 맞추기 ❓',
+                memo: '제 진짜 티어가 어디일까요? 꼭 맞춰보세요!',
+                perks: { follower: false, subscriber: false, cheese: true },
+                isForcedExtra: true,
+                watched: false
+            }
+        ];
+
+        let currentFilter = 'all';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            startCountdownTimer();
+            handleFormLogic();
+            renderSlots();
+        });
+
+        // 1. D-Day Timer Logic (Targets Monday 19:00 KST)
+        function startCountdownTimer() {
+            function update() {
+                const now = new Date();
+                
+                let target = new Date(now);
+                let dayOfWeek = now.getDay(); // 0:Sun, 1:Mon ... 6:Sat
+                let daysUntilMonday = (1 - dayOfWeek + 7) % 7;
+                
+                // If today is Monday but past 19:00, target next Monday
+                if (daysUntilMonday === 0 && now.getHours() >= 19) {
+                    daysUntilMonday = 7;
+                }
+                
+                target.setDate(target.getDate() + daysUntilMonday);
+                target.setHours(19, 0, 0, 0);
+
+                const diffMs = target - now;
+                const timerElement = document.getElementById('countdownTimer');
+                
+                if (diffMs <= 0) {
+                    timerElement.textContent = "마감됨";
+                    timerElement.classList.add("text-primary");
+                    return;
+                }
+
+                const d = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
+                const m = Math.floor((diffMs / 1000 / 60) % 60);
+                const s = Math.floor((diffMs / 1000) % 60);
+
+                let ddayStr = '';
+                if (d > 0) ddayStr += `${d}일 `;
+                ddayStr += `${String(h).padStart(2, '0')}시간 ${String(m).padStart(2, '0')}분 ${String(s).padStart(2, '0')}초`;
+                
+                timerElement.textContent = ddayStr;
+            }
+            update();
+            setInterval(update, 1000);
+        }
+
+        // 2. Form Logic (Tier enable/disable based on Game Mode and Guess mode)
+        function handleFormLogic() {
+            const modeInput = document.querySelector('input[name="gameMode"]:checked');
+            if (!modeInput) return;
+            const mode = modeInput.value;
+            const tierSelect = document.getElementById('tier');
+            const isGuess = document.getElementById('isTierGuess').checked;
+            const asterisk = document.getElementById('tierAsterisk');
+
+            // Style custom checkbox container
+            const guessLabel = document.getElementById('isTierGuess').parentElement;
+            if(isGuess) {
+                guessLabel.classList.add('bg-primary', 'text-white', 'border-primary');
+                guessLabel.classList.remove('bg-bg', 'text-text-main');
+            } else {
+                guessLabel.classList.remove('bg-primary', 'text-white', 'border-primary');
+                guessLabel.classList.add('bg-bg', 'text-text-main');
+            }
+
+            if (mode === '빠른대전' || mode === '기타(아케이드 등)' || isGuess) {
+                tierSelect.disabled = true;
+                tierSelect.required = false;
+                tierSelect.value = "";
+                asterisk.classList.add('hidden');
+                
+                if (isGuess && mode === '경쟁전') {
+                    tierSelect.innerHTML = '<option value="" selected>❓ (티어 맞추기 모드)</option>';
+                } else {
+                    tierSelect.innerHTML = `<option value="" selected>🌸 (${mode} - 티어 없음)</option>`;
+                }
+            } else {
+                tierSelect.disabled = false;
+                tierSelect.required = true;
+                asterisk.classList.remove('hidden');
+                
+                tierSelect.innerHTML = `
+                    <option value="" disabled selected>티어를 선택해주세요</option>
+                    <option value="브론즈">브론즈</option>
+                    <option value="실버">실버</option>
+                    <option value="골드">골드</option>
+                    <option value="플래티넘">플래티넘</option>
+                    <option value="에메랄드">에메랄드</option>
+                    <option value="다이아몬드">다이아몬드</option>
+                    <option value="마스터">마스터</option>
+                    <option value="그랜드마스터">그랜드마스터</option>
+                    <option value="챔피언">챔피언</option>
+                `;
+            }
+        }
+
+        // 3. Form Submission Handling
+        function handleSubmit(e) {
+            e.preventDefault();
+            
+            const nickname = document.getElementById('nickname').value.trim();
+            const replayCode = document.getElementById('replayCode').value.trim().toUpperCase();
+            const mode = document.querySelector('input[name="gameMode"]:checked').value;
+            const memo = document.getElementById('memo').value.trim();
+            
+            const isGuess = document.getElementById('isTierGuess').checked;
+            let tier = document.getElementById('tier').value;
+            
+            if (mode === '빠른대전' || mode === '기타(아케이드 등)') {
+                tier = mode;
+            } else if (isGuess) {
+                tier = "티어 맞추기 ❓";
+            }
+
+            const perks = {
+                follower: document.getElementById('optFollower').checked,
+                subscriber: document.getElementById('optSubscriber').checked,
+                cheese: document.getElementById('optCheese').checked,
+            };
+
+            const baseCount = replays.filter(r => !r.isForcedExtra).length;
+            const isForcedExtra = perks.subscriber || perks.cheese || baseCount >= 12;
+
+            const newReplay = {
+                id: Date.now().toString(),
+                nickname,
+                replayCode,
+                mode,
+                tier,
+                memo,
+                perks,
+                isForcedExtra,
+                watched: false
+            };
+
+            replays.push(newReplay);
+            saveData();
+            
+            document.getElementById('replayForm').reset();
+            const guessLabel = document.getElementById('isTierGuess').parentElement;
+            guessLabel.classList.remove('bg-primary', 'text-white', 'border-primary');
+            guessLabel.classList.add('bg-bg', 'text-text-main');
+            
+            handleFormLogic();
+            showToast(`'${nickname}'님의 신청이 등록되었습니다! 🩷`);
+        }
+
+        // Filter Setting
+        function setFilter(filter) {
+            currentFilter = filter;
+            ['All', 'Unwatched', 'Watched'].forEach(f => {
+                const btn = document.getElementById(`filter${f}`);
+                if (f.toLowerCase() === filter) {
+                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-extrabold bg-primary text-white shadow-sm transition-all";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-extrabold text-text-muted hover:text-text-main transition-all";
+                }
+            });
+            renderSlots();
+        }
+
+        // 4. Render Replay Slots Dashboard
+        function renderSlots() {
+            const baseContainer = document.getElementById('baseSlotsContainer');
+            const extraContainer = document.getElementById('extraSlotsContainer');
+            const extraWrapper = document.getElementById('extraSlotsWrapper');
+            const searchKeyword = document.getElementById('searchInput').value.trim().toLowerCase();
+            
+            let filteredReplays = replays.filter(r => {
+                // Status Filter
+                if (currentFilter === 'unwatched' && r.watched) return false;
+                if (currentFilter === 'watched' && !r.watched) return false;
+                
+                // Search Keyword Filter
+                if (searchKeyword) {
+                    const matchName = r.nickname.toLowerCase().includes(searchKeyword);
+                    const matchCode = r.replayCode.toLowerCase().includes(searchKeyword);
+                    return matchName || matchCode;
+                }
+                return true;
+            });
+
+            const baseList = filteredReplays.filter(r => !r.isForcedExtra).slice(0, 12);
+            const extraList = [
+                ...filteredReplays.filter(r => r.isForcedExtra),
+                ...filteredReplays.filter(r => !r.isForcedExtra).slice(12) 
+            ];
+
+            const totalBaseCount = replays.filter(r => !r.isForcedExtra).length;
+            document.getElementById('baseSlotCount').textContent = `${totalBaseCount} / 12`;
+            
+            let baseHTML = '';
+            for (let i = 0; i < 12; i++) {
+                if (i < baseList.length) {
+                    baseHTML += createCardHTML(baseList[i], i + 1, i);
+                } else if (!searchKeyword && currentFilter === 'all') {
+                    // Empty Slot placeholder
+                    baseHTML += `
+                        <div class="h-[220px] rounded-2xl border-2 border-dashed border-primary/20 bg-white/40 flex flex-col items-center justify-center text-primary/40 animate-slide-up" style="animation-delay: ${i * 0.03}s;">
+                            <span class="text-xs font-bold mb-1">Slot ${i + 1}</span>
+                            <span class="text-sm font-extrabold">비어있음 💤</span>
+                        </div>
+                    `;
+                }
+            }
+            baseContainer.innerHTML = baseHTML || '<div class="col-span-full py-8 text-center text-text-muted font-bold text-sm">해당 조건에 맞는 리플 신청이 없습니다. 🌸</div>';
+
+            if (extraList.length > 0) {
+                extraWrapper.classList.remove('hidden');
+                document.getElementById('extraSlotCount').textContent = `${extraList.length}개`;
+                let extraHTML = '';
+                extraList.forEach((replay, idx) => {
+                    extraHTML += createCardHTML(replay, `추가-${idx + 1}`, idx);
+                });
+                extraContainer.innerHTML = extraHTML;
+            } else {
+                extraWrapper.classList.add('hidden');
+            }
+
+            lucide.createIcons();
+        }
+
+        // Create Card HTML with prominent Applicant Nickname styling
+        function createCardHTML(replay, slotLabel, index) {
+            const watchedClass = replay.watched ? 'watched-card' : '';
+            const textClass = replay.watched ? 'watched-text' : '';
+            
+            let badges = '';
+            if (replay.perks.follower) badges += '<span class="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full font-extrabold shadow-badge">팔로우</span> ';
+            if (replay.perks.subscriber) badges += '<span class="text-[10px] bg-pink-50 text-primary border border-primary/30 px-2 py-0.5 rounded-full font-extrabold shadow-badge">구독자</span> ';
+            if (replay.perks.cheese) badges += '<span class="text-[10px] bg-yellow-50 text-yellow-700 border border-yellow-200 px-2 py-0.5 rounded-full font-extrabold shadow-badge">치즈</span>';
+
+            const delay = index * 0.04;
+
+            return `
+                <div class="replay-card bg-card border-2 border-primary/20 rounded-2xl p-4 sm:p-5 shadow-cute flex flex-col h-full animate-slide-up ${watchedClass}" style="animation-delay: ${delay}s;">
+                    
+                    <!-- Slot Header & Badges -->
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-extrabold bg-bg text-primary border border-primary/30 px-2.5 py-0.5 rounded-lg shadow-sm">#${slotLabel}</span>
+                        <div class="flex gap-1 flex-wrap justify-end">${badges}</div>
+                    </div>
+                    
+                    <!-- PROMINENT APPLICANT HIGHLIGHT BOX -->
+                    <div class="bg-primary/10 border-2 border-primary/30 rounded-xl p-3 mb-3 flex items-center gap-2.5 hover-bounce">
+                        <div class="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <i data-lucide="user-check" class="w-4 h-4"></i>
+                        </div>
+                        <div class="overflow-hidden">
+                            <span class="text-[10px] font-extrabold text-primary uppercase tracking-wider block leading-none mb-0.5">신청자</span>
+                            <h4 class="text-base sm:text-lg font-black text-text-main truncate ${textClass}">${escapeHTML(replay.nickname)}</h4>
+                        </div>
+                    </div>
+
+                    <!-- Mode & Tier Badges -->
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="text-xs font-extrabold bg-gray-100 text-text-muted px-2.5 py-1 rounded-md border border-gray-200">${escapeHTML(replay.mode)}</span>
+                        <span class="text-xs font-extrabold bg-primary/15 text-primary px-2.5 py-1 rounded-md border border-primary/30">${escapeHTML(replay.tier)}</span>
+                    </div>
+                    
+                    <!-- Replay Code Box with Copy Button -->
+                    <div class="bg-bg/90 p-3 rounded-xl border border-primary/20 mb-3 group relative">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="hash" class="w-4 h-4 text-primary"></i>
+                                <span class="font-mono font-black text-primary text-base sm:text-lg tracking-wider">${escapeHTML(replay.replayCode)}</span>
+                            </div>
+                            <button onclick="copyCode('${replay.replayCode}')" class="p-1.5 bg-white hover:bg-primary hover:text-white text-primary border border-primary/30 rounded-lg text-xs font-bold transition-all shadow-sm active-bounce" title="리플 코드 복사">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                        ${replay.memo ? `<p class="text-xs text-text-muted font-medium mt-2 border-t border-primary/10 pt-2 line-clamp-2" title="${escapeHTML(replay.memo)}">${escapeHTML(replay.memo)}</p>` : ''}
+                    </div>
+
+                    <!-- Interactive Watched Checkbox Button -->
+                    <label class="hover-bounce flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border-2 cursor-pointer transition-all mt-auto ${replay.watched ? 'bg-gray-100 border-gray-200 text-gray-500' : 'bg-white border-primary/40 text-primary hover:bg-primary/10 shadow-sm'}">
+                        <input type="checkbox" class="w-4 h-4 rounded text-primary focus:ring-primary border-primary/40 cursor-pointer" 
+                            ${replay.watched ? 'checked' : ''} onchange="toggleWatched('${replay.id}')">
+                        <span class="text-xs sm:text-sm font-extrabold">${replay.watched ? '시청 완료 💤' : '시청 완료 체크 🌸'}</span>
+                    </label>
+                </div>
+            `;
+        }
+
+        // 5. Interactions & Helpers
+        function toggleWatched(id) {
+            const index = replays.findIndex(r => r.id === id);
+            if (index !== -1) {
+                replays[index].watched = !replays[index].watched;
+                saveData();
+                if(replays[index].watched) {
+                    showToast(`'${replays[index].nickname}'님의 리플 시청 완료! 🩷`);
+                }
+            }
+        }
+
+        function copyCode(code) {
+            const tempInput = document.createElement('input');
+            tempInput.value = code;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showToast(`리플 코드 [${code}] 가 복사되었습니다! 📋`);
+        }
+
+        // Custom Cute Confirmation Modal Handlers (Replaces standard confirm)
+        function openClearModal() {
+            const modal = document.getElementById('clearModal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.children[0].classList.remove('scale-95');
+        }
+
+        function closeClearModal() {
+            const modal = document.getElementById('clearModal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.children[0].classList.add('scale-95');
+        }
+
+        function confirmClearAllData() {
+            replays = [];
+            saveData();
+            closeClearModal();
+            showToast("수집함이 깨끗하게 비워졌습니다. ✨");
+        }
+
+        function saveData() {
+            localStorage.setItem('somhachi_replays', JSON.stringify(replays));
+            renderSlots();
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastMsg');
+            document.getElementById('toastText').textContent = msg;
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 3000);
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag])
+            );
+        }
+    </script>
+</body>
+</html>
